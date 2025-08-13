@@ -11,6 +11,7 @@ window.addEventListener('DOMContentLoaded', event => {
 // ==================== CẤU HÌNH ====================
 const PAGE_SIZE = 9;
 let currentPage = 1;
+let currentCategory = 'all';
 
 // ==================== GIỚI HẠN CHỮ ====================
 function limitText(str, maxLength) {
@@ -20,11 +21,21 @@ function limitText(str, maxLength) {
 
 // ==================== DANH SÁCH SẢN PHẨM ====================
 function renderProducts(page) {
+    let filteredProducts = currentCategory === 'all'
+        ? PRODUCTS
+        : PRODUCTS.filter(p => p.category === currentCategory);
+
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    const products = PRODUCTS.slice(start, end);
+    const products = filteredProducts.slice(start, end);
 
     const productList = document.getElementById("product-list");
+
+    if (products.length === 0) {
+    productList.innerHTML = `<div class="col-12 text-center py-5"><h4>No products found.</h4></div>`;
+    return;
+    }
+
     productList.innerHTML = products.map(product => `
         <div class="col-md-4 mb-4 d-flex">
             <div class="card h-100 shadow-sm w-100 bg-faded">
@@ -33,35 +44,59 @@ function renderProducts(page) {
                     <h5 class="card-title">${limitText(product.name, 40)}</h5>
                     <p class="card-text flex-grow-1">${limitText(product.desc, 90)}</p>
                     <div class="card-buttons mt-auto d-flex gap-2">
-                        <a href="portfolio-details.html?id=${product.id}" class="portfolio-btn flex-fill">Detail</a>
+                        <a href="product-detail.html?id=${product.id}" class="portfolio-btn flex-fill">Detail</a>
                     </div>
                 </div>
             </div>
         </div>
     `).join('');
 }
+
 function renderPagination() {
-    const totalPages = Math.ceil(PRODUCTS.length / PAGE_SIZE);
+    let filteredProducts = currentCategory === 'all'
+        ? PRODUCTS
+        : PRODUCTS.filter(p => p.category === currentCategory);
+    const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
     const pagination = document.getElementById("pagination");
     let html = '';
 
     // Previous
-    html += `<li class="portfolio-page-item${currentPage === 1 ? ' disabled' : ''}">
-        <a class="portfolio-page-link" href="#" aria-label="Previous" onclick="goToPage(${currentPage - 1});return false;">
+    html += `<li class="page-item${currentPage === 1 ? ' disabled' : ''}">
+        <a class="page-link" href="#" aria-label="Previous" onclick="goToPage(${currentPage - 1});return false;">
             &laquo;
         </a>
     </li>`;
 
-    // Các nút số trang
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="portfolio-page-item${i === currentPage ? ' active' : ''}">
-            <a class="portfolio-page-link" href="#" onclick="goToPage(${i});return false;">${i}</a>
-        </li>`;
+    // Hiện tối đa 5 số trang, có dấu ...
+    let pageLinks = [];
+    if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) {
+            pageLinks.push(i);
+        }
+    } else {
+        if (currentPage <= 3) {
+            pageLinks = [1, 2, 3, 4, '...', totalPages];
+        } else if (currentPage >= totalPages - 2) {
+            pageLinks = [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        } else {
+            pageLinks = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        }
+    }
+
+    for (let i = 0; i < pageLinks.length; i++) {
+        const page = pageLinks[i];
+        if (page === '...') {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        } else {
+            html += `<li class="page-item${page === currentPage ? ' active' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${page});return false;">${page}</a>
+            </li>`;
+        }
     }
 
     // Next
-    html += `<li class="portfolio-page-item${currentPage === totalPages ? ' disabled' : ''}">
-        <a class="portfolio-page-link" href="#" aria-label="Next" onclick="goToPage(${currentPage + 1});return false;">
+    html += `<li class="page-item${currentPage === totalPages ? ' disabled' : ''}">
+        <a class="page-link" href="#" aria-label="Next" onclick="goToPage(${currentPage + 1});return false;">
             &raquo;
         </a>
     </li>`;
@@ -70,7 +105,10 @@ function renderPagination() {
 }
 
 function goToPage(page) {
-    const totalPages = Math.ceil(PRODUCTS.length / PAGE_SIZE);
+    let filteredProducts = currentCategory === 'all'
+        ? PRODUCTS
+        : PRODUCTS.filter(p => p.category === currentCategory);
+    const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
     if (page < 1 || page > totalPages) return;
     currentPage = page;
     renderProducts(currentPage);
@@ -113,7 +151,7 @@ function renderProductDetail() {
 
     if (!product) {
         detailDiv.innerHTML = `
-            <a href="../../portfolio.html" class="portfolio-btn btn-back mb-3">&larr; Back to Products</a>
+            <a href="../../product.html" class="portfolio-btn btn-back mb-3">&larr; Back to Products</a>
             <h2>Product not found</h2>
         `;
         return;
@@ -123,7 +161,7 @@ function renderProductDetail() {
     const imgs = product.imgs && product.imgs.length ? product.imgs : [product.img];
 
     detailDiv.innerHTML = `
-        <a href="../../portfolio.html" class="portfolio-btn btn-back mb-3">&larr; Back to Products</a>
+        <a href="../../product.html" class="portfolio-btn btn-back mb-3">&larr; Back to Products</a>
         <div class="text-center mb-3">
             <img src="${imgs[0]}" class="product-img-detail" id="main-product-img" alt="${product.name}">
         </div>
@@ -169,7 +207,7 @@ function renderProductDetail() {
 //         cartContent.innerHTML = `
 //             <div class="text-center py-5">
 //                 <h4>Your cart is empty</h4>
-//                 <a href="portfolio.html" class="btn btn-primary mt-4">Go to Products</a>
+//                 <a href="product.html" class="btn btn-primary mt-4">Go to Products</a>
 //             </div>
 //         `;
 //         return;
@@ -261,4 +299,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('cart-content')) {
         renderCart();
     }
+        // Sự kiện click tab
+    document.querySelectorAll('#product-tabs .nav-link').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('#product-tabs .nav-link').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentCategory = this.getAttribute('data-category');
+            currentPage = 1;
+            renderProducts(currentPage);
+            renderPagination();
+        });
+    });
+
+    renderProducts(currentPage);
+    renderPagination();
 });
